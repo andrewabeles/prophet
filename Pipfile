@@ -10,6 +10,7 @@ plotly-express = "*"
 prophet = "*"
 scikit-learn = "*"
 streamlit = "*"
+plotly = "*"
 
 [dev-packages]
 
