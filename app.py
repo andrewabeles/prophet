@@ -15,22 +15,27 @@ st.set_page_config(
 
 st.title("Prophet")
 
+countries_df = pd.read_csv('countries.csv', sep='\t')
+
 with st.sidebar:
     with st.expander("Data"):
-        uploaded_file = st.file_uploader("Upload time series CSV file")
-        if uploaded_file is not None:
-            df_raw = pd.read_csv(uploaded_file)
+        if 'uploaded_file' not in st.session_state:
+            st.session_state.uploaded_file = st.file_uploader("Upload time series CSV file")
+        if st.session_state.uploaded_file is not None:
+            if 'df_raw' not in st.session_state:
+                st.session_state.df_raw = pd.read_csv(st.session_state.uploaded_file)
 
             # select columns 
             ds_colname = st.selectbox(
                 "Select datestamp (ds) column",
-                df_raw.select_dtypes(include=[object, 'datetime', 'datetimetz']).columns
+                st.session_state.df_raw.select_dtypes(include=[object, 'datetime', 'datetimetz']).columns
             )
             y_colname = st.selectbox(
                 "Select values (y) column",
-                df_raw.select_dtypes(include='number').columns
+                st.session_state.df_raw.select_dtypes(include='number').columns
             )
-            df = df_raw[[ds_colname, y_colname]].copy()
+            if 'df' not in st.session_state:
+                df = st.session_state.df_raw[[ds_colname, y_colname]].copy()
             df.rename(columns={ds_colname: 'ds', y_colname: 'y'}, inplace=True)
             df['ds'] = pd.to_datetime(df['ds'], utc=True)
             df['ds'] = df['ds'].dt.tz_localize(None)
@@ -52,13 +57,13 @@ with st.sidebar:
             df_val['set'] = 'validation'
             df_split = pd.concat([df_train, df_val])
     with st.expander("Trend Parameters"):
-        if uploaded_file is not None:
+        if st.session_state.uploaded_file is not None:
             growth = st.radio("Trend Type", ['linear', 'logistic'])
             if growth == 'logistic':
                 cap = st.number_input("Maximum", value=2 * df_train['y'].max())
                 floor = st.number_input("Minimum", value=0)
-                df['cap'] = cap 
-                df['floor'] = floor 
+                st.session_state.df['cap'] = cap 
+                st.session_state.df['floor'] = floor 
                 df_train['cap'] = cap 
                 df_train['floor'] = floor 
                 df_val['cap'] = cap 
@@ -74,7 +79,14 @@ with st.sidebar:
                 changepoints = st.multiselect("Changepoints", df_train['ds'].unique())
             changepoint_prior_scale = st.slider("Changepoint Prior Strength", min_value=0.01, max_value=1.0, value=0.05, step=0.01)
 
-if uploaded_file is not None:
+    with st.expander("Holiday Parameters"):
+        if st.session_state.uploaded_file is not None:
+            include_country_holidays = st.checkbox("Include Country Holidays")
+            if include_country_holidays:
+                country = st.selectbox("Select Country", countries_df['country'], index=149)
+                country_code = countries_df[countries_df['country'] == country]['code'].values[0]
+
+if st.session_state.uploaded_file is not None:
     split_fig = px.line(
         df_split,
         x='ds',
@@ -92,6 +104,8 @@ if uploaded_file is not None:
         changepoint_prior_scale=changepoint_prior_scale,
         changepoints=changepoints
     )
+    if include_country_holidays:
+        m.add_country_holidays(country_name=country_code)
     m.fit(df_train)
     forecast = m.predict(df)
 
