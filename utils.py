@@ -1,11 +1,15 @@
 import plotly.express as px 
 
-def plot_forecast(model, forecast, show_changepoints=False):
+def plot_forecast(model, forecast, show_sets=False, show_changepoints=False):
+    if show_sets:
+        color = 'set'
+    else:
+        color = None
     fig = px.line(
         forecast,
         x='ds',
         y='y',
-        color='set',
+        color=color,
         hover_data={'ds': False, 'set': False}
     )
     fig.add_scatter(

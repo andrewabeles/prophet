@@ -91,7 +91,7 @@ if st.session_state.uploaded_file is not None:
         y='y',
         color='set'
     )
-    st.header("Split Data")
+    st.header("Data")
     st.plotly_chart(split_fig)   
 
     # define and fit Prophet model 
@@ -108,19 +108,18 @@ if st.session_state.uploaded_file is not None:
     forecast = m.predict(df)
 
     # model components 
-    st.header("Model Components")
+    st.header("Model")
     components_fig = plot_components_plotly(m, forecast)
     st.plotly_chart(components_fig)
 
-    # forecast 
+    # forecast on test 
     df_merged = df_split.merge(
         forecast,
         on='ds',
         how='left'
     )
-    st.header("Forecast")
     show_changepoints = True
-    forecast_fig = plot_forecast(m, df_merged, show_changepoints=show_changepoints)
+    forecast_fig = plot_forecast(m, df_merged, show_sets=True, show_changepoints=show_changepoints)
     st.plotly_chart(forecast_fig)
 
     # evaluation 
@@ -158,3 +157,15 @@ if st.session_state.uploaded_file is not None:
         test_errors_dist_fig = plot_errors_dist(df_merged, set='test')
         st.plotly_chart(test_errors_fig)
         st.plotly_chart(test_errors_dist_fig)
+
+    st.header("Forecast")
+    forecast_periods = st.number_input("Forecast Periods", min_value=1, value=365)
+    future = m.make_future_dataframe(periods=forecast_periods)
+    if growth == 'logistic':
+        future['cap'] = cap 
+        future['floor'] = floor
+    future_forecast = m.predict(future)
+    future_forecast['y'] = df['y'].copy()
+    future_forecast['set'] = 'actual'
+    future_forecast_fig = plot_forecast(m, future_forecast, show_sets=False, show_changepoints=False)
+    st.plotly_chart(future_forecast_fig)
