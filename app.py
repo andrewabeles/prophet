@@ -19,8 +19,7 @@ countries_df = pd.read_csv('countries.csv', sep='\t')
 
 with st.sidebar:
     with st.expander("Data"):
-        if 'uploaded_file' not in st.session_state:
-            st.session_state.uploaded_file = st.file_uploader("Upload time series CSV file")
+        st.session_state.uploaded_file = st.file_uploader("Upload time series CSV file")
         if st.session_state.uploaded_file is not None:
             if 'df_raw' not in st.session_state:
                 st.session_state.df_raw = pd.read_csv(st.session_state.uploaded_file)
@@ -42,32 +41,31 @@ with st.sidebar:
 
             # split data 
             val_size = st.slider(
-                "Select Validation Set Size",
+                "Test Set Size",
                 min_value=0.1,
                 max_value=0.5,
                 value=0.2,
                 step=0.05,
-                help="""The proportion of observations that will be used for model selection.
-                Remember to retain a separate hidden test set for final model evaluation."""
+                help="""The proportion of observations that will be used for model evaluation."""
             )
             # split data
             df.sort_values('ds', ascending=True, inplace=True) 
-            df_train, df_val = train_test_split(df, test_size=val_size, shuffle=False)
+            df_train, df_test = train_test_split(df, test_size=val_size, shuffle=False)
             df_train['set'] = 'train'
-            df_val['set'] = 'validation'
-            df_split = pd.concat([df_train, df_val])
+            df_test['set'] = 'test'
+            df_split = pd.concat([df_train, df_test])
     with st.expander("Trend Parameters"):
         if st.session_state.uploaded_file is not None:
             growth = st.radio("Trend Type", ['linear', 'logistic'])
             if growth == 'logistic':
                 cap = st.number_input("Maximum", value=2 * df_train['y'].max())
                 floor = st.number_input("Minimum", value=0)
-                st.session_state.df['cap'] = cap 
-                st.session_state.df['floor'] = floor 
+                df['cap'] = cap 
+                df['floor'] = floor 
                 df_train['cap'] = cap 
                 df_train['floor'] = floor 
-                df_val['cap'] = cap 
-                df_val['floor'] = floor
+                df_test['cap'] = cap 
+                df_test['floor'] = floor
             changepoint_selection = st.radio("Changepoint Selection", ['automatic', 'manual'])
             if changepoint_selection == 'automatic':
                 n_changepoints = st.number_input("Number of Trend Changepoints", min_value=0, max_value=50, value=25)
@@ -127,16 +125,36 @@ if st.session_state.uploaded_file is not None:
 
     # evaluation 
     df_merged['error'] = df_merged['y'] - df_merged['yhat']
-    y_true = df_merged.query("set == 'validation'")['y']
-    y_pred = df_merged.query("set == 'validation'")['yhat']
-    rmse = root_mean_squared_error(y_true, y_pred)
-    mape = mean_absolute_percentage_error(y_true, y_pred)
+    y_true_train = df_merged.query("set == 'train'")['y']
+    y_pred_train = df_merged.query("set == 'train'")['yhat']
+    y_true_test = df_merged.query("set == 'test'")['y']
+    y_pred_test = df_merged.query("set == 'test'")['yhat']
+    rmse_train = root_mean_squared_error(y_true_train, y_pred_train)
+    mape_train = mean_absolute_percentage_error(y_true_train, y_pred_train)
+    rmse_test = root_mean_squared_error(y_true_test, y_pred_test)
+    mape_test = mean_absolute_percentage_error(y_true_test, y_pred_test)
     col1, col2 = st.columns(2)
     with col1:
-        st.metric(label='Root Mean Sqared Error', value=f'{round(rmse, 2)}')
-        errors_fig = plot_errors(df_merged.query("set == 'validation'"))
-        st.plotly_chart(errors_fig)
+        st.subheader("Train Metrics")
     with col2:
-        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape, 2)}%')
-        errors_dist_fig = plot_errors_dist(df_merged.query("set == 'validation'"))
-        st.plotly_chart(errors_dist_fig)
+        st.subheader("Test Metrics")
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric(label='Root Mean Squared Error', value=f'{round(rmse_train, 2)}')
+    with col2:
+        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape_train, 2)}%')
+    with col3:
+        st.metric(label='Root Mean Squared Error', value=f'{round(rmse_test, 2)}')
+    with col4:
+        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape_test, 2)}%')
+    col1, col2 = st.columns(2)
+    with col1:
+        train_errors_fig = plot_errors(df_merged, set='train')
+        train_errors_dist_fig = plot_errors_dist(df_merged, set='train')
+        st.plotly_chart(train_errors_fig)
+        st.plotly_chart(train_errors_dist_fig)
+    with col2:
+        test_errors_fig = plot_errors(df_merged, set='test')
+        test_errors_dist_fig = plot_errors_dist(df_merged, set='test')
+        st.plotly_chart(test_errors_fig)
+        st.plotly_chart(test_errors_dist_fig)

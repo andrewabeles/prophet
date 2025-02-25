@@ -37,19 +37,19 @@ def plot_forecast(model, forecast, show_changepoints=False):
     fig.update_layout(hovermode='x')
     return fig 
 
-def plot_errors(df):
+def plot_errors(df, set='train'):
     fig = px.bar(
-        df,
+        df.query("set == @set"),
         x='ds',
         y='error',
-        title='Forecast Errors'
+        title=f'Forecast Errors ({set})'
     )
     return fig 
 
-def plot_errors_dist(df):
+def plot_errors_dist(df, set='train'):
     fig = px.histogram(
-        df,
+        df.query("set == @set"),
         x='error',
-        title='Error Distribution'
+        title=f'Error Distribution ({set})'
     )
     return fig 
