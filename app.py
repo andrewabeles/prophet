@@ -14,6 +14,11 @@ st.set_page_config(
 )
 
 st.title("Prophet")
+with st.expander("About"):
+    st.markdown("""
+        This app aims to make time series forecasting more accessible. It uses Facebook's [Prophet forecasting procedure](https://facebook.github.io/prophet/) 
+        to model time series data uploaded by the user. The model parameters can be adjusted in the sidebar. 
+    """)
 
 countries_df = pd.read_csv('countries.csv', sep='\t')
 
@@ -46,7 +51,7 @@ with st.sidebar:
                 max_value=0.5,
                 value=0.2,
                 step=0.05,
-                help="""The proportion of observations that will be used for model evaluation."""
+                help="""The proportion of observations that will be reserved for model evaluation."""
             )
             # split data
             df.sort_values('ds', ascending=True, inplace=True) 
@@ -56,7 +61,11 @@ with st.sidebar:
             df_split = pd.concat([df_train, df_test])
     with st.expander("Trend Parameters"):
         if st.session_state.uploaded_file is not None:
-            growth = st.radio("Trend Type", ['linear', 'logistic'])
+            growth = st.radio(
+                "Growth", 
+                ['linear', 'logistic'],
+                help="""Select 'logistic' if you expect growth to saturate at a given maximum or minimum e.g. total addressable market."""
+            )
             if growth == 'logistic':
                 cap = st.number_input("Maximum", value=2 * df_train['y'].max())
                 floor = st.number_input("Minimum", value=0)
@@ -140,11 +149,11 @@ if st.session_state.uploaded_file is not None:
     with col1:
         st.metric(label='Root Mean Squared Error', value=f'{round(rmse_train, 2)}')
     with col2:
-        st.metric(label='Mean Absolute Percentage Error', value=f'{round(mape_train, 2)}%')
+        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape_train, 2)}%')
     with col3:
         st.metric(label='Root Mean Squared Error', value=f'{round(rmse_test, 2)}')
     with col4:
-        st.metric(label='Mean Absolute Percentage Error', value=f'{round(mape_test, 2)}%')
+        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape_test, 2)}%')
     col1, col2 = st.columns(2)
     with col1:
         train_errors_fig = plot_errors(df_merged, set='train')
