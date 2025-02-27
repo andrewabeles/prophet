@@ -191,7 +191,12 @@ if st.session_state.uploaded_file is not None:
         st.plotly_chart(test_errors_dist_fig)
 
     st.header("Forecast")
-    forecast_periods = st.number_input("Forecast Periods", min_value=1, value=365)
+    forecast_periods = st.number_input(
+        "Forecast Periods", 
+        min_value=1, 
+        value=365,
+        help="""Number of periods to forecast into the future."""
+    )
     m_fcst = Prophet(
         growth=growth,
         changepoint_range=changepoint_range,
