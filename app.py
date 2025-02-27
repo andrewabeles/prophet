@@ -68,14 +68,12 @@ with st.sidebar:
                 df_test['floor'] = floor
             changepoint_selection = st.radio("Changepoint Selection", ['automatic', 'manual'])
             if changepoint_selection == 'automatic':
-                n_changepoints = st.number_input("Number of Trend Changepoints", min_value=0, max_value=50, value=25)
                 changepoint_range = st.slider("Range of Trend Changepoints", min_value=0.0, max_value=1.0, value=0.8, step=0.05)
                 changepoints=None
             elif changepoint_selection == 'manual':
-                n_changepoints = None
                 changepoint_range = 0.8
                 changepoints = st.multiselect("Changepoints", df_train['ds'].unique())
-            changepoint_prior_scale = st.slider("Changepoint Prior Strength", min_value=0.01, max_value=1.0, value=0.05, step=0.01)
+            changepoint_prior_scale = st.selectbox("Changepoint Prior Strength", options=[0.005, 0.05, 0.5, 5, 50], index=1)
 
     with st.expander("Holiday Parameters"):
         if st.session_state.uploaded_file is not None:
@@ -83,6 +81,7 @@ with st.sidebar:
             if include_country_holidays:
                 country = st.selectbox("Select Country", countries_df['country'], index=149)
                 country_code = countries_df[countries_df['country'] == country]['code'].values[0]
+                holidays_prior_scale = st.selectbox("Holidays Prior Strength", options=[0.001, 0.01, 0.1, 1, 10, 100], index=4)
 
 if st.session_state.uploaded_file is not None:
     split_fig = px.line(
@@ -97,13 +96,13 @@ if st.session_state.uploaded_file is not None:
     # define and fit Prophet model 
     m = Prophet(
         growth=growth,
-        n_changepoints=n_changepoints,
         changepoint_range=changepoint_range,
         changepoint_prior_scale=changepoint_prior_scale,
         changepoints=changepoints
     )
     if include_country_holidays:
         m.add_country_holidays(country_name=country_code)
+        m.holidays_prior_scale = holidays_prior_scale
     m.fit(df_train)
     forecast = m.predict(df)
 
@@ -141,11 +140,11 @@ if st.session_state.uploaded_file is not None:
     with col1:
         st.metric(label='Root Mean Squared Error', value=f'{round(rmse_train, 2)}')
     with col2:
-        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape_train, 2)}%')
+        st.metric(label='Mean Absolute Percentage Error', value=f'{round(mape_train, 2)}%')
     with col3:
         st.metric(label='Root Mean Squared Error', value=f'{round(rmse_test, 2)}')
     with col4:
-        st.metric(label='Mean Absolute Percentage Error', value=f'{round(100 * mape_test, 2)}%')
+        st.metric(label='Mean Absolute Percentage Error', value=f'{round(mape_test, 2)}%')
     col1, col2 = st.columns(2)
     with col1:
         train_errors_fig = plot_errors(df_merged, set='train')
@@ -160,12 +159,22 @@ if st.session_state.uploaded_file is not None:
 
     st.header("Forecast")
     forecast_periods = st.number_input("Forecast Periods", min_value=1, value=365)
-    future = m.make_future_dataframe(periods=forecast_periods)
+    m_fcst = Prophet(
+        growth=growth,
+        changepoint_range=changepoint_range,
+        changepoint_prior_scale=changepoint_prior_scale,
+        changepoints=changepoints
+    )
+    if include_country_holidays:
+        m_fcst.add_country_holidays(country_name=country_code)
+        m_fcst.holidays_prior_scale = holidays_prior_scale
+    m_fcst.fit(df)
+    future = m_fcst.make_future_dataframe(periods=forecast_periods)
     if growth == 'logistic':
         future['cap'] = cap 
         future['floor'] = floor
-    future_forecast = m.predict(future)
+    future_forecast = m_fcst.predict(future)
     future_forecast['y'] = df['y'].copy()
     future_forecast['set'] = 'actual'
-    future_forecast_fig = plot_forecast(m, future_forecast, show_sets=False, show_changepoints=False)
+    future_forecast_fig = plot_forecast(m_fcst, future_forecast, show_sets=False, show_changepoints=False)
     st.plotly_chart(future_forecast_fig)
