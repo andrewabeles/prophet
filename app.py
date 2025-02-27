@@ -75,22 +75,46 @@ with st.sidebar:
                 df_train['floor'] = floor 
                 df_test['cap'] = cap 
                 df_test['floor'] = floor
-            changepoint_selection = st.radio("Changepoint Selection", ['automatic', 'manual'])
+            changepoint_selection = st.radio(
+                "Changepoint Selection", 
+                ['automatic', 'manual'],
+                help="""Whether the trend's potential changepoints are automatically or manually selected."""
+            )
             if changepoint_selection == 'automatic':
-                changepoint_range = st.slider("Range of Trend Changepoints", min_value=0.0, max_value=1.0, value=0.8, step=0.05)
+                changepoint_range = st.slider(
+                    "Range of Trend Changepoints", 
+                    min_value=0.0, 
+                    max_value=1.0, 
+                    value=0.8, 
+                    step=0.05,
+                    help="""Proportion of training data that contains potential changepoints."""
+                )
                 changepoints=None
             elif changepoint_selection == 'manual':
                 changepoint_range = 0.8
                 changepoints = st.multiselect("Changepoints", df_train['ds'].unique())
-            changepoint_prior_scale = st.selectbox("Changepoint Prior Strength", options=[0.005, 0.05, 0.5, 5, 50], index=1)
+            changepoint_prior_scale = st.selectbox(
+                "Changepoint Prior Strength", 
+                options=[0.005, 0.05, 0.5, 5, 50], 
+                index=1,
+                help="""Sensitivity to potential changepoints. Higher values capture more complex trends but are more prone to overfit."""
+            )
 
     with st.expander("Holiday Parameters"):
         if st.session_state.uploaded_file is not None:
-            include_country_holidays = st.checkbox("Include Country Holidays")
+            include_country_holidays = st.checkbox(
+                "Include Country Holidays",
+                help="""Select if you want to capture holiday effects."""
+            )
             if include_country_holidays:
-                country = st.selectbox("Select Country", countries_df['country'], index=149)
+                country = st.selectbox("Country", countries_df['country'], index=149)
                 country_code = countries_df[countries_df['country'] == country]['code'].values[0]
-                holidays_prior_scale = st.selectbox("Holidays Prior Strength", options=[0.001, 0.01, 0.1, 1, 10, 100], index=4)
+                holidays_prior_scale = st.selectbox(
+                    "Holidays Prior Strength", 
+                    options=[0.001, 0.01, 0.1, 1, 10, 100], 
+                    index=4,
+                    help="""Sensitivity to holiday effects. Higher values capture larger holiday effects but are more prone to overfit."""
+                )
 
 if st.session_state.uploaded_file is not None:
     split_fig = px.line(
