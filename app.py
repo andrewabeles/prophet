@@ -24,10 +24,9 @@ countries_df = pd.read_csv('countries.csv', sep='\t')
 
 with st.sidebar:
     with st.expander("Data"):
-        st.session_state.uploaded_file = st.file_uploader("Upload time series CSV file")
-        if st.session_state.uploaded_file is not None:
-            if 'df_raw' not in st.session_state:
-                st.session_state.df_raw = pd.read_csv(st.session_state.uploaded_file)
+        uploaded_file = st.file_uploader("Upload time series CSV file", type='csv')
+        if uploaded_file is not None:
+            st.session_state.df_raw = pd.read_csv(uploaded_file)
 
             # select columns 
             ds_colname = st.selectbox(
@@ -60,7 +59,7 @@ with st.sidebar:
             df_test['set'] = 'test'
             df_split = pd.concat([df_train, df_test])
     with st.expander("Trend Parameters"):
-        if st.session_state.uploaded_file is not None:
+        if uploaded_file is not None:
             growth = st.radio(
                 "Growth", 
                 ['linear', 'logistic'],
@@ -101,7 +100,7 @@ with st.sidebar:
             )
 
     with st.expander("Holiday Parameters"):
-        if st.session_state.uploaded_file is not None:
+        if uploaded_file is not None:
             include_country_holidays = st.checkbox(
                 "Include Country Holidays",
                 help="""Select if you want to capture holiday effects."""
@@ -116,7 +115,7 @@ with st.sidebar:
                     help="""Sensitivity to holiday effects. Higher values capture larger holiday effects but are more prone to overfit."""
                 )
 
-if st.session_state.uploaded_file is not None:
+if uploaded_file is not None:
     split_fig = px.line(
         df_split,
         x='ds',
