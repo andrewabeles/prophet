@@ -13,17 +13,19 @@ st.set_page_config(
     layout='wide'
 )
 
-st.title("Prophet")
-with st.expander("About"):
+st.title("Time Series Forecasting with Prophet")
+with st.expander("About", expanded=True):
     st.markdown("""
-        This app aims to make time series forecasting more accessible. It uses Facebook's [Prophet forecasting procedure](https://facebook.github.io/prophet/) 
-        to model time series data uploaded by the user. The model parameters can be adjusted in the sidebar. 
+        This app uses Facebook's [Prophet forecasting procedure](https://facebook.github.io/prophet/) 
+        to model any time series data uploaded by the user. Demo data (daily pageviews of Saturday Night Live's Wikipedia page) 
+        can be downloaded [here](https://github.com/andrewabeles/prophet/blob/main/SNL-wikipedia-pageviews-2022-2024.csv). 
+        The model parameters can be adjusted in the sidebar. 
     """)
 
 countries_df = pd.read_csv('countries.csv', sep='\t')
 
 with st.sidebar:
-    with st.expander("Data"):
+    with st.expander("Data", expanded=True):
         uploaded_file = st.file_uploader("Upload time series CSV file", type='csv')
         if uploaded_file is not None:
             st.session_state.df_raw = pd.read_csv(uploaded_file)
